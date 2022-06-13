@@ -1,33 +1,30 @@
-import express from "express";
-import bodyParser from "body-parser";
-import { listings } from "./listings";
+import dotenv from "dotenv";
+dotenv.config();
+import express,{Application}from "express";
+import { ApolloServer } from "apollo-server-express";
+import { connectDataBase } from "./database";
+import { typeDefs,resolvers } from "./graphql";
+
 const app=express();
 const PORT=process.env.PORT||3000;
 
-app.use(bodyParser.json());
+const mount =async(app :Application)=>{
+  
+    const db= await connectDataBase();
+    const server=new ApolloServer({typeDefs,resolvers,context:()=>({db})});
 
-const one=1;
-const two=2;
+    server.applyMiddleware({app,path:"/api"});
+    app.listen(PORT)
+    
+    console.log(`[app] //localhost:${PORT}`);
 
-app.get("/",(_req,res)=>{
-    res.send(`${one}+${two}=${one+two}`);
-})
+    const listings=await db.listings.find({}).toArray();
 
-app.get("/api/listings",(_req,res)=>{ 
-   return res.json(listings);
-})
+    console.log(listings); 
+}
 
-app.post("/api/listings",(req,res)=>{
-    const id:string=req.body.id;
-    for (let i = 0; i < listings.length; i++) {
-       if(listings[i].id===id){
-           return res.send(listings.splice(i,1));
-       }
-    }
-    res.send("failed");
-})
+mount(app);
 
-app.listen(PORT,()=>{
-    console.log(`you app connected to ${PORT}`);
-})
- 
+
+
+
